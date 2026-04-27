@@ -4,7 +4,7 @@
     {
         public override decimal HakedisHesapla()
         {
-            return HourlyRate * WorkedHours; // Yazılım için düz hesap
+            return HourlyRate * WorkedHours; 
         }
     }
 }

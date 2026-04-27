@@ -4,7 +4,7 @@
     {
         public override decimal HakedisHesapla()
         {
-            return (HourlyRate * WorkedHours) + 200; // Tasarımda ek ücret olsun
+            return (HourlyRate * WorkedHours) + 200; 
         }
     }
 }
