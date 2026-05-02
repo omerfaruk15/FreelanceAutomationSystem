@@ -1,6 +1,8 @@
 ﻿using Core.Entities;
-using Microsoft.Data.SqlClient;
-using System.Data;
+using DataAccess;
+using Microsoft.EntityFrameworkCore; 
+using System.Collections.Generic;
+using System.Linq; 
 
 namespace DataAccess
 {
@@ -8,56 +10,58 @@ namespace DataAccess
     {
         public void Add(Calisan employee)
         {
-            string query = "INSERT INTO Employees (FirstName, LastName, Expertise) VALUES (@p1, @p2, @p3)";
-
-            SqlParameter[] parameters = {
-                new SqlParameter("@p1", employee.FirstName),
-                new SqlParameter("@p2", employee.LastName),
-                new SqlParameter("@p3", employee.Expertise)
-            };
-
-            SqlHelper.ExecuteNonQuery(query, parameters);
+            using (var context = new AppDbContext())
+            {
+                context.Employees.Add(employee);
+                context.SaveChanges();
+            }
         }
 
         public List<Calisan> GetAll()
         {
-            List<Calisan> employees = new List<Calisan>();
-            DataTable dt = SqlHelper.ExecuteQuery("SELECT * FROM Employees");
-
-            foreach (DataRow row in dt.Rows)
+            using (var context = new AppDbContext())
             {
-                employees.Add(new Calisan
-                {
-                    EmployeeID = (int)row["EmployeeID"],
-                    FirstName = row["FirstName"].ToString(),
-                    LastName = row["LastName"].ToString(),
-                    Expertise = row["Expertise"].ToString()
-                });
+                return context.Employees.ToList();
             }
-            return employees;
         }
 
         public void Delete(int employeeId)
         {
-            string deleteTasksQuery = "DELETE FROM Tasks WHERE EmployeeID = @p1";
-            SqlParameter[] p1 = { new SqlParameter("@p1", employeeId) };
-            SqlHelper.ExecuteNonQuery(deleteTasksQuery, p1);
+            using (var context = new AppDbContext())
+            {
+                var tasks = context.Tasks.Where(t => t.EmployeeID == employeeId);
+                context.Tasks.RemoveRange(tasks);
 
-            string deleteEmpQuery = "DELETE FROM Employees WHERE EmployeeID = @p1";
-            SqlParameter[] p2 = { new SqlParameter("@p1", employeeId) };
-            SqlHelper.ExecuteNonQuery(deleteEmpQuery, p2);
+                var emp = context.Employees.Find(employeeId);
+                if (emp != null)
+                {
+                    context.Employees.Remove(emp);
+                    context.SaveChanges();
+                }
+            }
         }
 
         public void Update(Calisan emp)
         {
-            string query = "UPDATE Employees SET FirstName=@p1, LastName=@p2, Expertise=@p3 WHERE EmployeeID=@p4";
-            SqlParameter[] parameters = {
-        new SqlParameter("@p1", emp.FirstName),
-        new SqlParameter("@p2", emp.LastName),
-        new SqlParameter("@p3", emp.Expertise),
-        new SqlParameter("@p4", emp.EmployeeID)
-    };
-            SqlHelper.ExecuteNonQuery(query, parameters);
+            using (var context = new AppDbContext())
+            {
+                var existing = context.Employees.Find(emp.EmployeeID);
+                if (existing != null)
+                {
+                    existing.FirstName = emp.FirstName;
+                    existing.LastName = emp.LastName;
+                    existing.Expertise = emp.Expertise;
+                    context.SaveChanges();
+                }
+            }
+        }
+
+        public List<Calisan> GetByExpertise(string expertise)
+        {
+            using (var context = new AppDbContext())
+            {
+                return context.Employees.Where(e => e.Expertise == expertise).ToList();
+            }
         }
     }
 }

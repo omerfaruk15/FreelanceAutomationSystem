@@ -23,3 +23,4 @@ CREATE TABLE Tasks (
     TaskType NVARCHAR(20), 
     CreatedDate DATETIME DEFAULT GETDATE()
 );
+

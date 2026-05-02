@@ -1,7 +1,8 @@
 ﻿using Core.Entities;
-using Microsoft.Data.SqlClient;
-using System.Data;
-
+using DataAccess; 
+using Microsoft.EntityFrameworkCore; 
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DataAccess
 {
@@ -9,62 +10,51 @@ namespace DataAccess
     {
         public void Add(Gorev gorev)
         {
-            string query = "INSERT INTO Tasks (ProjectID, EmployeeID, TaskTitle, HourlyRate, WorkedHours, TaskType) " +
-                           "VALUES (@p1, @p2, @p3, @p4, @p5, @p6)";
-
-            SqlParameter[] parameters =
+            using (var context = new AppDbContext())
             {
-        new SqlParameter("@p1", gorev.ProjectID),
-        new SqlParameter("@p2", gorev.EmployeeID),
-        new SqlParameter("@p3", gorev.TaskTitle),
-        new SqlParameter("@p4", gorev.HourlyRate),
-        new SqlParameter("@p5", gorev.WorkedHours),
-        new SqlParameter("@p6", gorev.TaskType)
-    };
-
-            SqlHelper.ExecuteNonQuery(query, parameters);
+                context.Tasks.Add(gorev);
+                context.SaveChanges();
+            }
         }
 
-        public List<Core.Entities.Gorev> GetAll()
+        public List<Gorev> GetAll()
         {
-            List<Core.Entities.Gorev> list = new List<Core.Entities.Gorev>();
-            DataTable dt = SqlHelper.ExecuteQuery("SELECT * FROM Tasks");
-
-            foreach (DataRow row in dt.Rows)
+            using (var context = new AppDbContext())
             {
-                string type = row["TaskType"].ToString() ?? "";
-                Core.Entities.Gorev g = type == "Yazılım" ? new YazilimGorevi() : new TasarimGorevi();
+                var list = context.Tasks
+                                  .Include(t => t.Calisan)
+                                  .Include(t => t.Project)
+                                  .ToList();
 
-                g.TaskID = (int)row["TaskID"];
-                g.ProjectID = (int)row["ProjectID"];
-                g.EmployeeID = (int)row["EmployeeID"];
-                g.TaskTitle = row["TaskTitle"].ToString();
-                g.HourlyRate = (decimal)row["HourlyRate"];
-                g.WorkedHours = (decimal)row["WorkedHours"];
-                g.TaskType = type;
-
-                list.Add(g);
+                foreach (var item in list)
+                {
+                    if (item.Calisan != null)
+                        item.CalisanAdSoyad = item.Calisan.FirstName + " " + item.Calisan.LastName;
+                }
+                return list;
             }
-            return list;
         }
 
         public void Delete(int taskId)
         {
-            string query = "DELETE FROM Tasks WHERE TaskID = @p1";
-            SqlParameter[] parameters = { new SqlParameter("@p1", taskId) };
-            SqlHelper.ExecuteNonQuery(query, parameters);
+            using (var context = new AppDbContext())
+            {
+                var taskToDelete = context.Tasks.Find(taskId);
+                if (taskToDelete != null)
+                {
+                    context.Tasks.Remove(taskToDelete);
+                    context.SaveChanges();
+                }
+            }
         }
 
-        public void Update(Gorev task)
+      
+        public int GetTaskCountByType(string type)
         {
-            string query = "UPDATE Tasks SET TaskTitle=@p1, HourlyRate=@p2, WorkedHours=@p3 WHERE TaskID=@p4";
-            SqlParameter[] parameters = {
-        new SqlParameter("@p1", task.TaskTitle),
-        new SqlParameter("@p2", task.HourlyRate),
-        new SqlParameter("@p3", task.WorkedHours),
-        new SqlParameter("@p4", task.TaskID)
-    };
-            SqlHelper.ExecuteNonQuery(query, parameters);
+            using (var context = new AppDbContext())
+            {
+                return context.Tasks.Count(t => t.TaskType == type);
+            }
         }
     }
 }
